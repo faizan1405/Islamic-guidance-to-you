@@ -1,0 +1,55 @@
+# ===== Code-only repo: no reels, no content, no secrets =====
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# dependencies and caches (re-installable)
+node_modules/
+.remotion/
+__pycache__/
+*.pyc
+
+# all video / audio / image outputs
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+*.mp3
+*.wav
+*.m4a
+**/out/
+**/build/
+**/lines/
+
+# engine sound-effect library is code assets: keep it (music file is unused, stays out)
+!growkaz-stickman-studio/engine/sf2/sfx/
+!growkaz-stickman-studio/engine/sf2/sfx/*.mp3
+
+# reel content stays on my PC / Drive, never on GitHub
+01 Islamic Reels/*
+!01 Islamic Reels/Published/
+!01 Islamic Reels/Not Published/
+01 Islamic Reels/Published/*
+01 Islamic Reels/Not Published/*
+!01 Islamic Reels/Published/.gitkeep
+!01 Islamic Reels/Not Published/.gitkeep
+00 Scripts/*
+!00 Scripts/.gitkeep
+work/*
+!work/.gitkeep
+growkaz-stickman-studio/projects/*
+!growkaz-stickman-studio/projects/.gitkeep
+
+# personal state (rebuild from the Google Sheet: python scripts/update_topics.py)
+TOPICS.md
+HANDOFF.md
+
+# reference material, not code
+docs/
+GrowKaz_Stickman.plugin
+
+# old Scale Flow git history (backup, delete manually when sure)
+.git_old_backup/

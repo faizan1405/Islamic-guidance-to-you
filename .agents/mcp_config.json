@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "metricool": {
+      "url": "https://ai.metricool.com/mcp"
+    },
+    "meta-ads": {
+      "url": "https://mcp.facebook.com/ads"
+    }
+  }
+}
