@@ -1,10 +1,14 @@
 """Generate the narrator voiceover with ElevenLabs (with word timestamps) for one reel.
 
 Usage (run from the project root):
-    python -X utf8 scripts/generate_voice.py --reel 01 --script work/reel01/voice_script.json --voice-id <VOICE_ID>
+    python -X utf8 scripts/generate_voice.py --reel 01 --script work/reel01/voice_script.json
 
-voice_script.json:
-    {"lines": [{"text": "[calm] Pehli line...", "gap": 0.2}, {"text": "Doosri line...", "gap": 0.0}]}
+voice_script.json (1 to 3 speakers per reel):
+    {"voices": {"sahabi": "<VOICE_ID>", "elder": "<VOICE_ID>"},
+     "lines": [{"speaker": "narrator", "text": "[calm] Pehli line...", "gap": 0.2},
+               {"speaker": "sahabi", "text": "Doosri line...", "gap": 0.0}]}
+  - "narrator" uses NARRATOR_VOICE_ID from scripts/config.py (Taksh) unless --voice-id is given.
+  - every other speaker must have a voice id in "voices". No "speaker" key = narrator.
   - text may start with an emotion tag in [brackets]; tags are removed from captions and timing.
   - gap = silence in seconds after the line.
 
@@ -21,6 +25,8 @@ import urllib.request
 from pathlib import Path
 
 import numpy as np
+
+import config
 
 SR = 44100
 MODEL_ID = "eleven_v4"
@@ -81,12 +87,25 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--reel", required=True, help="reel number, e.g. 01")
     ap.add_argument("--script", required=True, help="voice_script.json")
-    ap.add_argument("--voice-id", required=True)
+    ap.add_argument("--voice-id", default=None, help="override the narrator voice (default: config.NARRATOR_VOICE_ID)")
+    ap.add_argument("--speed", type=float, default=1.0, help="ElevenLabs speaking speed 0.7-1.2 (1.1 = 10 percent faster, keeps the voice natural)")
     ap.add_argument("--tail", type=float, default=1.2, help="seconds of silence after the last line")
     a = ap.parse_args()
 
     api_key = load_api_key()
-    lines = json.loads(Path(a.script).read_text(encoding="utf-8"))["lines"]
+    data = json.loads(Path(a.script).read_text(encoding="utf-8"))
+    lines = data["lines"]
+    voices = dict(data.get("voices", {}))
+    voices["narrator"] = a.voice_id or voices.get("narrator") or config.NARRATOR_VOICE_ID
+    speakers = []
+    for line in lines:
+        line.setdefault("speaker", "narrator")
+        if line["speaker"] not in voices:
+            raise SystemExit(f"No voice id for speaker '{line['speaker']}'. Add it under \"voices\" in the script JSON.")
+        if line["speaker"] not in speakers:
+            speakers.append(line["speaker"])
+    if len(speakers) > 3:
+        raise SystemExit(f"Max 3 speakers per reel, found {len(speakers)}: {speakers}")
     work = Path(f"work/reel{a.reel}")
     out_dir = work / "lines"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -95,13 +114,13 @@ def main():
     for i, line in enumerate(lines):
         n = i + 1
         payload = {"text": line["text"], "model_id": MODEL_ID, "language_code": LANGUAGE_CODE,
-                   "voice_settings": {"stability": 0.5, "similarity_boost": 0.8}}
+                   "voice_settings": {"stability": 0.5, "similarity_boost": 0.8, **({"speed": a.speed} if a.speed != 1.0 else {})}}
         if i > 0:
             payload["previous_text"] = strip_tags(lines[i - 1]["text"])
         if i < len(lines) - 1:
             payload["next_text"] = strip_tags(lines[i + 1]["text"])
         req = urllib.request.Request(
-            f"https://api.elevenlabs.io/v1/text-to-speech/{a.voice_id}/with-timestamps",
+            f"https://api.elevenlabs.io/v1/text-to-speech/{voices[line['speaker']]}/with-timestamps",
             data=json.dumps(payload).encode("utf-8"),
             headers={"xi-api-key": api_key, "Content-Type": "application/json"})
         print(f"Line {n:02d}: {line['text']}")
@@ -123,7 +142,7 @@ def main():
         trim_e = min(raw_dur, words[-1]["end"] + 0.08) if words else raw_dur
         audio = raw[int(trim_s * SR):int(trim_e * SR)]
         dur = len(audio) / SR
-        all_lines.append({"i": n, "start": round(t, 3), "end": round(t + dur, 3), "text": strip_tags(line["text"])})
+        all_lines.append({"i": n, "start": round(t, 3), "end": round(t + dur, 3), "speaker": line["speaker"], "text": strip_tags(line["text"])})
         for w in words:
             all_words.append({"word": w["word"], "start": round(t + w["start"] - trim_s, 3), "end": round(t + w["end"] - trim_s, 3)})
         master.append(audio)

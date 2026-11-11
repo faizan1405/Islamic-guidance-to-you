@@ -30,6 +30,7 @@ TOPICS_PATH = os.path.join(ROOT, "TOPICS.md")
 # Google: Drive > "Islamic Guidance to You" holds the Sheet and the "Reels" subfolder.
 SPREADSHEET_ID = _env("ISLAMIC_SHEET_ID", "1Cjb3uR2PhUq5D5vSwLjllq_Sd16SEaOmXIgNoErfPTg")   # Islamic Reels Tracker
 DRIVE_FOLDER_ID = _env("ISLAMIC_DRIVE_FOLDER_ID", "18_VnYtQpmEoppyYHATEv_75JRKo_EbaK")             # Islamic Guidance to You / Reels
+NARRATOR_VOICE_ID = _env("ISLAMIC_NARRATOR_VOICE_ID", "hr8Jn6R7mrb0ncJHDryQ")  # Taksh, approved by Faizan
 REELS_TAB = "Reels Tracker"
 IDEAS_TAB = "Future Ideas"
 
