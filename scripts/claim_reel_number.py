@@ -13,22 +13,39 @@ import os
 import re
 import sys
 
-from config import CLAIMS, NOT_PUB_DIR, PUB_DIR, REELS
+from config import CLAIMS, NOT_PUB_DIR, PUB_DIR, REELS, ROOT, SCRIPTS_DIR
 
 
 def used_numbers():
+    """Every number seen ANYWHERE counts as used: reel files, scripts, work folders, claim tickets, Sheet column A.
+    Numbers are never reused, not even for a dropped reel."""
     nums = set()
-    for d in [REELS, PUB_DIR, NOT_PUB_DIR]:
+    for d in [REELS, PUB_DIR, NOT_PUB_DIR, SCRIPTS_DIR]:
         if os.path.exists(d):
             for name in os.listdir(d):
-                m = re.match(r"^(\d+)\s*-", name)
+                m = re.match(r"^(?:Script - )?(\d+)\s*-", name)
                 if m:
                     nums.add(int(m.group(1)))
+    wd = os.path.join(ROOT, "work")
+    if os.path.exists(wd):
+        for name in os.listdir(wd):
+            m = re.match(r"^reel(\d+)$", name)
+            if m:
+                nums.add(int(m.group(1)))
     if os.path.exists(CLAIMS):
         for name in os.listdir(CLAIMS):
             m = re.match(r"^(\d+)\.claim$", name)
             if m:
                 nums.add(int(m.group(1)))
+    try:  # the Sheet is the master list: column A of Reels Tracker
+        from sync_sheet import read_range
+        from config import REELS_TAB
+        rows = read_range(f"{REELS_TAB}!A2:A500")
+        for r in rows or []:
+            if r and r[0].strip().isdigit():
+                nums.add(int(r[0]))
+    except Exception:
+        pass
     return nums
 
 
